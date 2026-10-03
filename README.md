@@ -1,11 +1,30 @@
-Async Alembic: noldan oxirigacha
+# Async Alembic: noldan oxirigacha
 
-Stek: FastAPI + SQLAlchemy (async) + asyncpg + PostgreSQL + Alembic.
+**Stek:** FastAPI + SQLAlchemy (async) + asyncpg + PostgreSQL + Alembic
 
-1-qadam. Kutubxonalarni o'rnatish
-bash
+## Mundarija
+
+1. [Kutubxonalarni o'rnatish](#1-qadam-kutubxonalarni-ornatish)
+2. [Loyiha tuzilmasi](#2-qadam-loyiha-tuzilmasi)
+3. [database.py](#3-qadam-appdatabasepy)
+4. [Alembic'ni async shablon bilan yaratish](#4-qadam-alembicni-async-shablon-bilan-yaratish)
+5. [env.py](#5-qadam-alembicenvpy)
+6. [Birinchi migratsiya](#6-qadam-birinchi-migratsiya)
+7. [Kundalik ish tartibi](#7-qadam-kundalik-ish-tartibi)
+8. [Foydali buyruqlar](#foydali-buyruqlar)
+9. [Tez-tez uchraydigan xatolar](#tez-tez-uchraydigan-xatolar)
+
+---
+
+## 1-qadam. Kutubxonalarni o'rnatish
+
+```bash
 pip install "sqlalchemy[asyncio]" asyncpg alembic
-2-qadam. Loyiha tuzilmasi (namuna)
+```
+
+## 2-qadam. Loyiha tuzilmasi
+
+```
 FastAPI_plus_SQLAlchemy_backend/
 ├── alembic/              # alembic init'dan keyin paydo bo'ladi
 ├── alembic.ini
@@ -14,8 +33,11 @@ FastAPI_plus_SQLAlchemy_backend/
 │   ├── database.py       # engine, Base, session
 │   └── models.py         # barcha modellar
 └── main.py
-3-qadam. app/database.py
-python
+```
+
+## 3-qadam. `app/database.py`
+
+```python
 from sqlalchemy.ext.asyncio import create_async_engine, async_sessionmaker
 from sqlalchemy.orm import DeclarativeBase
 
@@ -24,24 +46,28 @@ DATABASE_URL = "postgresql+asyncpg://user:password@localhost:5432/dbname"
 engine = create_async_engine(DATABASE_URL, echo=True)
 SessionLocal = async_sessionmaker(engine, expire_on_commit=False)
 
+
 class Base(DeclarativeBase):
     pass
+```
 
-URL postgresql+asyncpg:// bilan boshlanishi shart.
+> **Muhim:** URL `postgresql+asyncpg://` bilan boshlanishi shart.
 
-Bu yerda Base.metadata.create_all() chaqirmang. Jadvallarni faqat Alembic yaratadi.
+> **Muhim:** `Base.metadata.create_all()` ni **chaqirmang**. Jadvallarni faqat Alembic yaratadi.
 
-4-qadam. Alembic'ni async shablon bilan yaratish
-bash
+## 4-qadam. Alembic'ni async shablon bilan yaratish
+
+```bash
 alembic init -t async alembic
+```
 
-Muhim joyi -t async. Shunda env.py avtomatik async uchun tayyor bo'ladi.
+Asosiy joyi `-t async`: shunda `env.py` avtomatik async uchun tayyor bo'ladi.
 
-5-qadam. alembic/env.py
+## 5-qadam. `alembic/env.py`
 
-Faylni quyidagicha qiling (o'z import yo'llaringizni qo'ying):
+Faylni quyidagicha qiling (import yo'llarini o'zingizniki bilan almashtiring):
 
-python
+```python
 import asyncio
 from logging.config import fileConfig
 
@@ -102,38 +128,48 @@ if context.is_offline_mode():
     run_migrations_offline()
 else:
     run_migrations_online()
+```
 
-Parolingizda % belgisi bo'lsa, DATABASE_URL.replace("%", "%%") ishlating, aks holda configparser xato beradi.
+> Parolingizda `%` belgisi bo'lsa, `DATABASE_URL.replace("%", "%%")` ishlating, aks holda `configparser` xato beradi.
 
-6-qadam. Birinchi migratsiya
-bash
+## 6-qadam. Birinchi migratsiya
+
+```bash
 alembic revision --autogenerate -m "initial"
 alembic upgrade head
+```
 
-Birinchisi migratsiya faylini yaratadi, ikkinchisi uni bazaga qo'llaydi va alembic_version jadvalini o'zi yaratadi.
+- Birinchi buyruq migratsiya faylini yaratadi.
+- Ikkinchisi uni bazaga qo'llaydi va `alembic_version` jadvalini o'zi yaratadi.
 
-7-qadam. Kundalik ish tartibi
+## 7-qadam. Kundalik ish tartibi
 
-Har safar model o'zgarganda (masalan, phone ustuni qo'shdingiz):
+Har safar model o'zgarganda (masalan, `phone` ustuni qo'shdingiz):
 
-1. models.py'ni o'zgartiring
-2. alembic revision --autogenerate -m "add phone field"
-3. alembic/versions/ ichidagi yangi faylni ko'zdan kechiring
-4. alembic upgrade head
+1. `models.py` ni o'zgartiring
+2. `alembic revision --autogenerate -m "add phone field"`
+3. `alembic/versions/` ichidagi yangi faylni ko'zdan kechiring
+4. `alembic upgrade head`
 
-3-qadamni o'tkazib yubormang. Autogenerate ba'zan noto'g'ri narsa yozadi (masalan, ustun nomini o'zgartirishni "o'chirish + qo'shish" deb tushunadi).
+> 3-qadamni o'tkazib yubormang. Autogenerate ba'zan noto'g'ri narsa yozadi (masalan, ustun nomini o'zgartirishni "o'chirish + qo'shish" deb tushunadi).
 
-Foydali buyruqlar
-Buyruq	Vazifasi
-alembic current	Bazadagi hozirgi versiya
-alembic heads	Fayllardagi oxirgi versiya
-alembic history	Barcha migratsiyalar ro'yxati
-alembic downgrade -1	Bitta qadam orqaga qaytarish
-alembic stamp head	Migratsiyani bajarmasdan bazani head deb belgilash
-Tez-tez uchraydigan xatolar
-MissingGreenlet: env.py sinxron, URL esa asyncpg. Yechim: 4-5-qadamlar (-t async).
-Target database is not up to date: avval alembic upgrade head (yoki jadvallar allaqachon bo'lsa alembic stamp head), keyin revision.
-Bo'sh migratsiya (pass): env.py'da import app.models yo'q yoki target_metadata noto'g'ri.
-Yangi jadval ko'rinmayapti: model app.models'da import qilinmagan (modellar bir nechta faylda bo'lsa, hammasini import qiling).
+---
 
-Xohlasangiz, buni .md fayl qilib ham beraman, loyihangizga docs/ ichiga qo'yib qo'yishingiz uchun.
+## Foydali buyruqlar
+
+| Buyruq | Vazifasi |
+|---|---|
+| `alembic current` | Bazadagi hozirgi versiya |
+| `alembic heads` | Fayllardagi oxirgi versiya |
+| `alembic history` | Barcha migratsiyalar ro'yxati |
+| `alembic downgrade -1` | Bitta qadam orqaga qaytarish |
+| `alembic stamp head` | Migratsiyani bajarmasdan bazani head deb belgilash |
+
+## Tez-tez uchraydigan xatolar
+
+| Xato | Sababi va yechimi |
+|---|---|
+| `MissingGreenlet` | `env.py` sinxron, URL esa asyncpg. Yechim: 4-5-qadamlar (`-t async`). |
+| `Target database is not up to date` | Avval `alembic upgrade head` (jadvallar allaqachon bo'lsa `alembic stamp head`), keyin `revision`. |
+| Bo'sh migratsiya (`pass`) | `env.py`'da `import app.models` yo'q yoki `target_metadata` noto'g'ri. |
+| Yangi jadval ko'rinmayapti | Model `app.models`'da import qilinmagan. Modellar bir nechta faylda bo'lsa, hammasini import qiling. |
